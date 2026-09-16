@@ -1,5 +1,8 @@
 # winmedic
 
+[![ci](https://github.com/marcdanielj/winmedic/actions/workflows/ci.yml/badge.svg)](https://github.com/marcdanielj/winmedic/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/marcdanielj/winmedic.svg)](https://pkg.go.dev/github.com/marcdanielj/winmedic)
+
 Diagnoses the things that actually break Windows environments, and says **what to do about each one** in plain language.
 
 One executable. No installer, no dependencies, no admin rights — because the machine that needs diagnosing is rarely in a state to install anything.
