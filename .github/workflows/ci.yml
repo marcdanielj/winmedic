@@ -1,0 +1,40 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # windows-latest is the one that matters: this tool runs on Windows, so
+        # it is tested on real Windows every push rather than only cross-compiled.
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: 'stable' }
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: 'stable' }
+      - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: 'stable' }
+      - name: cross-compile for every target IT actually has
+        run: |
+          set -eux
+          for target in windows/amd64 windows/arm64 linux/amd64 darwin/arm64; do
+            GOOS=${target%/*} GOARCH=${target#*/} go build -o /dev/null .
+          done
