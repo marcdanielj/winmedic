@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -126,11 +128,31 @@ func TestEmptyLogIsSkippedNotFailed(t *testing.T) {
 	}
 }
 
-// On a non-Windows machine this must explain itself rather than crash.
-func TestReadBootLogOffWindowsExplainsItself(t *testing.T) {
-	if _, err := readBootLog(nil, 5); err == nil {
-		t.Skip("running on Windows; the live log is available")
-	} else if !strings.Contains(err.Error(), "Windows") {
+// On Windows this talks to the real event log; anywhere else it must explain
+// itself rather than crash. Passing a nil context here is what caught a genuine
+// panic on Windows that every other platform hid, because readBootLog returns
+// before touching the context off-Windows.
+func TestReadBootLogIsPlatformAware(t *testing.T) {
+	out, err := readBootLog(context.Background(), 5)
+
+	if runtime.GOOS == "windows" {
+		if err != nil {
+			// A fresh install or CI image may have an empty channel. That is a
+			// legitimate outcome, not a failure of this code.
+			t.Logf("live boot log unavailable on this host: %v", err)
+			return
+		}
+		// Real wevtutil output, parsed by the same code the fixtures exercise.
+		if _, _, perr := parseBootEvents(strings.NewReader(out)); perr != nil {
+			t.Errorf("live wevtutil output did not parse: %v", perr)
+		}
+		return
+	}
+
+	if err == nil {
+		t.Fatalf("expected an error on %s, got output", runtime.GOOS)
+	}
+	if !strings.Contains(err.Error(), "Windows") {
 		t.Errorf("error should name the platform limitation, got %q", err)
 	}
 }
